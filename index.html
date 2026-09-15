@@ -117,6 +117,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
+      font-size: 14px;
     }
     th, td {
       padding: 12px;
@@ -130,7 +131,6 @@
     }
     tr:hover {
       background: #fffacd;
-      cursor: pointer;
     }
     .text-small {
       font-size: 12px;
@@ -143,11 +143,20 @@
     }
     .emoji-raison {
       font-size: 14px;
-      margin-right: 5px;
+      margin-right: 2px;
     }
     .periode-nombre {
       font-weight: bold;
       color: #1a5490;
+      font-size: 15px;
+    }
+    .ratio-badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -191,7 +200,7 @@
     <!-- Section 2: Action -->
     <div class="section">
       <h2>2️⃣ Chercher tes meilleures périodes</h2>
-      <p class="text-small">L'outil analyse les 18 prochains mois à partir d'aujourd'hui et te propose les 10 meilleures périodes de congés.</p>
+      <p class="text-small">L'outil analyse les 18 prochains mois à partir d'aujourd'hui et te propose les 10 meilleures périodes de congés (minimum 5 jours, maximum 3 semaines).</p>
       <button onclick="trouverMeilleures()">🏆 Trouver mes 10 meilleures périodes</button>
     </div>
 
@@ -205,7 +214,6 @@
     const toISO = (d) => d.toISOString().split('T')[0];
     const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
     const fmt = (d) => d.toLocaleDateString('fr-FR');
-    const dayOfWeek = (d) => d.getDay();
     const isWeekday = (d) => d.getDay() >= 1 && d.getDay() <= 5;
 
     // Jours fériés français
@@ -260,26 +268,21 @@
     };
 
     // Compter les raisons pour une bonne période
-    function getRaisons(debut, fin, zone) {
+    function getRaisons(debut, fin) {
       let raisons = [];
-      let jFeries = 0, vacances = 0;
+      let jFeries = 0, vacances = 0, we = 0;
 
       for (let d = new Date(debut); d <= fin; d = addDays(d, 1)) {
         if (isJourFerie(d)) jFeries++;
         if (isVacances(d)) vacances++;
+        if (d.getDay() === 0 || d.getDay() === 6) we++;
       }
 
-      if (jFeries > 0) raisons.push(`<span class="emoji-raison">🔴</span>${jFeries} jour(s) férié(s)`);
-      if (vacances > 0) raisons.push(`<span class="emoji-raison">🟠</span>Vacances scolaires`);
-      
-      // Inclure les WE
-      let compteurWE = 0;
-      for (let d = new Date(debut); d <= fin; d = addDays(d, 1)) {
-        if (d.getDay() === 0 || d.getDay() === 6) compteurWE++;
-      }
-      if (compteurWE > 0) raisons.push(`<span class="emoji-raison">⛱️</span>${compteurWE} jour(s) weekend`);
+      if (vacances > 0) raisons.push(`🟠 Vacances scolaires`);
+      if (jFeries > 0) raisons.push(`🔴 ${jFeries} jour(s) férié(s)`);
+      if (we > 0) raisons.push(`⛱️ ${we} jour(s) weekend inclus`);
 
-      if (raisons.length === 0) raisons.push(`<span class="emoji-raison">✅</span>Période équilibrée`);
+      if (raisons.length === 0) raisons.push(`✅ Période bien placée`);
 
       return raisons;
     }
@@ -305,20 +308,28 @@
 
       let meilleures = [];
 
-      // Chercher toutes les périodes
+      // Chercher toutes les périodes VALABLES (min 5j, max 21j)
       for (let s = new Date(debut); s <= fin; s = addDays(s, 1)) {
-        for (let len = 3; len <= 21; len++) {
+        for (let len = 5; len <= 21; len++) {  // MIN 5 JOURS, MAX 21 JOURS
           const e = addDays(s, len - 1);
           if (e > fin) break;
 
           const cout = coutCP(s, e);
-          if (cout > dispo) continue;
+          if (cout > dispo || cout < 1) continue;  // Doit coûter au moins 1 jour CP
 
           const repos = joursRepos(s, e);
           
-          // Score = ratio repos/CP * longueur (favorise long repos avec peu de CP)
+          // Score = privilégie repos max avec peu de CP
           const ratio = repos / cout;
-          const score = ratio * Math.log(repos);
+          
+          // Bonus si c'est pendant vacances ou avec jours fériés
+          let bonus = 0;
+          for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
+            if (isVacances(d)) bonus += 10;
+            if (isJourFerie(d)) bonus += 5;
+          }
+          
+          const score = (ratio * 10) + bonus + Math.log(repos);
 
           meilleures.push({ 
             debut: s, 
@@ -335,27 +346,34 @@
       meilleures.sort((a, b) => b.score - a.score);
       meilleures = meilleures.slice(0, 10);
 
+      if (meilleures.length === 0) {
+        afficherResultat('<div class="result-box"><p>Aucune période valable trouvée avec vos jours disponibles.</p></div>');
+        return;
+      }
+
       let html = '<div class="result-box"><h3>🏆 Top 10 des meilleures périodes</h3><table>';
-      html += '<tr><th>#</th><th>Période</th><th>Jours sans bosser</th><th>CP décompté</th><th>Pourquoi c\'est bien</th></tr>';
+      html += '<tr><th>#</th><th>Période</th><th>Durée totale</th><th>CP à poser</th><th>Rapport</th><th>Pourquoi c\'est bien</th></tr>';
 
       meilleures.forEach((p, i) => {
         const raisons = getRaisons(p.debut, p.fin);
         const raisonsText = raisons.join(' • ');
         
         html += `<tr>
-          <td><strong>${i + 1}</strong></td>
+          <td style="font-weight:bold;text-align:center">${i + 1}</td>
           <td><span class="periode-nombre">${fmt(p.debut)} → ${fmt(p.fin)}</span></td>
-          <td><strong>${p.repos} jours</strong></td>
-          <td><strong>${p.cout} jours CP</strong></td>
+          <td style="text-align:center"><strong>${p.repos} jours</strong></td>
+          <td style="text-align:center"><strong>${p.cout} CP</strong></td>
+          <td style="text-align:center"><span class="ratio-badge">${p.ratio.toFixed(1)}</span></td>
           <td><span class="raison">${raisonsText}</span></td>
         </tr>`;
       });
 
       html += '</table>';
       html += '<p class="text-small" style="margin-top: 15px;"><strong>💡 Comment lire ce tableau :</strong><br>';
-      html += '• <strong>Jours sans bosser</strong> = durée totale (weekends + fériés inclus)<br>';
-      html += '• <strong>CP décompté</strong> = jours de congés à utiliser (jours ouvrés uniquement)<br>';
-      html += '• Le classement privilégie les périodes avec un maximum de repos pour un minimum de CP</p>';
+      html += '• <strong>Durée totale</strong> = jours de repos réels (weekends + fériés + CP)<br>';
+      html += '• <strong>CP à poser</strong> = jours de congés à utiliser (jours ouvrés uniquement)<br>';
+      html += '• <strong>Rapport</strong> = ratio jours de repos / jours de CP (plus c\'est haut, mieux c\'est !)<br>';
+      html += '• Le classement privilégie les périodes avec beaucoup de repos pour peu de CP</p>';
       html += '</div>';
       afficherResultat(html);
     }
