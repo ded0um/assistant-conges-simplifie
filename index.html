@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planificateur de Congés - Simple</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #1a5490;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .section:last-child {
+      border-bottom: none;
+    }
+    h2 {
+      color: #2c5aa0;
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .form-group.full {
+      grid-template-columns: 1fr;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+      color: #444;
+    }
+    input[type="number"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    button {
+      background: #2c5aa0;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin-right: 10px;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #1a3a60;
+    }
+    .alert {
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      text-align: center;
+      border-left: 4px solid #2c5aa0;
+    }
+    .stat-number {
+      font-size: 28px;
+      font-weight: bold;
+      color: #2c5aa0;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .result-box {
+      background: #f0f7ff;
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+      border-left: 4px solid #2c5aa0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f0f4f8;
+      font-weight: bold;
+      color: #2c5aa0;
+    }
+    tr:hover {
+      background: #f9f9f9;
+    }
+    .text-small {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📅 Planificateur de Congés</h1>
+
+    <!-- Section 1: Mes jours de congés -->
+    <div class="section">
+      <h2>1️⃣ Mes jours de congés</h2>
+      <div class="form-group">
+        <div>
+          <label for="n1">Jours N-1 restants</label>
+          <input type="number" id="n1" min="0" step="0.5" value="5">
+          <p class="text-small">Jours de l'année précédente à utiliser avant avril</p>
+        </div>
+        <div>
+          <label for="n">Jours N disponibles</label>
+          <input type="number" id="n" min="0" step="0.5" value="25">
+          <p class="text-small">Jours de cette année</p>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-number" id="totalJours">30</div>
+          <div class="stat-label">Total disponible</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="joursRestants">30</div>
+          <div class="stat-label">Jours restants</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-number" id="joursUtilises">0</div>
+          <div class="stat-label">Jours utilisés</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Mes préférences -->
+    <div class="section">
+      <h2>2️⃣ Mes préférences</h2>
+      <div class="form-group full">
+        <div>
+          <label for="annee">Année à planifier</label>
+          <input type="number" id="annee" min="2024" max="2030">
+        </div>
+      </div>
+      <div class="form-group">
+        <div>
+          <label for="zone">Zone scolaire</label>
+          <select id="zone">
+            <option value="A">Zone A</option>
+            <option value="B" selected>Zone B</option>
+            <option value="C">Zone C</option>
+          </select>
+          <p class="text-small">Pour les vacances scolaires</p>
+        </div>
+        <div>
+          <label for="objectif">Mon objectif</label>
+          <select id="objectif">
+            <option value="long">Plus longue période possible</option>
+            <option value="ratio" selected>Meilleur ratio repos/jours</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Période à analyser -->
+    <div class="section">
+      <h2>3️⃣ Analyser une période</h2>
+      <div class="form-group">
+        <div>
+          <label for="dateStart">Date de début</label>
+          <input type="date" id="dateStart">
+        </div>
+        <div>
+          <label for="dateEnd">Date de fin</label>
+          <input type="date" id="dateEnd">
+        </div>
+      </div>
+
+      <button onclick="analyzerPeriode()">📊 Analyser cette période</button>
+      <button onclick="trouverMeilleures()">🏆 Trouver les meilleures périodes</button>
+      <button onclick="reinitialiser()">🔄 Réinitialiser</button>
+    </div>
+
+    <!-- Résultats -->
+    <div id="resultats"></div>
+  </div>
+
+  <script>
+    // Utilitaires
+    const toDate = (str) => new Date(str + 'T00:00:00');
+    const toISO = (d) => d.toISOString().split('T')[0];
+    const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
+    const fmt = (d) => d.toLocaleDateString('fr-FR');
+    const dayOfWeek = (d) => d.getDay();
+    const isWeekday = (d) => d.getDay() >= 1 && d.getDay() <= 5;
+
+    // Jours fériés français
+    const jferies = (annee) => [
+      new Date(annee, 0, 1), // Jour de l'An
+      new Date(annee, 4, 1), // Fête du Travail
+      new Date(annee, 4, 8), // Victoire 1945
+      new Date(annee, 6, 14), // Fête nationale
+      new Date(annee, 7, 15), // Assomption
+      new Date(annee, 10, 1), // Toussaint
+      new Date(annee, 10, 11), // Armistice
+      new Date(annee, 11, 25) // Noël
+    ];
+
+    const isJourFerie = (d) => jferies(d.getFullYear()).some(j => toISO(j) === toISO(d));
+
+    // Vacances scolaires (simplifié)
+    const isVacances = (d, zone) => {
+      const vacances = {
+        A: [[2, 7, 23], [4, 4, 20], [7, 4, 31], [10, 17, 2], [12, 19, 4]],
+        B: [[2, 14, 2], [4, 11, 27], [7, 4, 31], [10, 17, 2], [12, 19, 4]],
+        C: [[2, 21, 9], [4, 18, 4], [7, 4, 31], [10, 17, 2], [12, 19, 4]]
+      };
+      const m = d.getMonth() + 1;
+      const jour = d.getDate();
+      return vacances[zone]?.some(v => v[0] === m && jour >= v[1] && jour <= v[2]);
+    };
+
+    // Calcul du coût en CP (jours ouvrés uniquement)
+    const coutCP = (debut, fin) => {
+      let count = 0;
+      for (let d = new Date(debut); d <= fin; d = addDays(d, 1)) {
+        if (isWeekday(d) && !isJourFerie(d)) count++;
+      }
+      return count;
+    };
+
+    // Mise à jour des stats
+    function mettreAJourStats() {
+      const n1 = parseFloat(document.getElementById('n1').value) || 0;
+      const n = parseFloat(document.getElementById('n').value) || 0;
+      const total = n1 + n;
+      document.getElementById('totalJours').textContent = total;
+      document.getElementById('joursRestants').textContent = total;
+    }
+
+    // Analyser une période
+    function analyzerPeriode() {
+      const debut = document.getElementById('dateStart').value;
+      const fin = document.getElementById('dateEnd').value;
+      const zone = document.getElementById('zone').value;
+
+      if (!debut || !fin) {
+        afficherResultat('<div class="alert alert-warning">⚠️ Veuillez entrer une date de début et de fin</div>');
+        return;
+      }
+
+      const d1 = toDate(debut);
+      const d2 = toDate(fin);
+
+      if (d2 < d1) {
+        afficherResultat('<div class="alert alert-warning">⚠️ La date de fin doit être après la date de début</div>');
+        return;
+      }
+
+      const cout = coutCP(d1, d2);
+      const jours = Math.floor((d2 - d1) / 86400000) + 1;
+      let jFeries = 0, vacances = 0;
+
+      for (let d = new Date(d1); d <= d2; d = addDays(d, 1)) {
+        if (isJourFerie(d)) jFeries++;
+        if (isVacances(d, zone)) vacances++;
+      }
+
+      const dispo = parseFloat(document.getElementById('n').value) + parseFloat(document.getElementById('n1').value);
+      const possible = cout <= dispo;
+
+      let html = `
+        <div class="result-box">
+          <h3>📋 Analyse de la période</h3>
+          <table>
+            <tr><td><strong>Période</strong></td><td>${fmt(d1)} → ${fmt(d2)}</td></tr>
+            <tr><td><strong>Durée calendaire</strong></td><td>${jours} jours</td></tr>
+            <tr><td><strong>Coût en CP</strong></td><td>${cout} jours ouvrés</td></tr>
+            <tr><td><strong>Jours fériés</strong></td><td>${jFeries}</td></tr>
+            <tr><td><strong>Vacances scolaires</strong></td><td>${vacances}</td></tr>
+            <tr><td><strong>Possible ?</strong></td><td>${possible ? '✅ OUI' : '❌ NON (trop cher)'}</td></tr>
+          </table>
+        </div>
+      `;
+      afficherResultat(html);
+    }
+
+    // Trouver les meilleures périodes
+    function trouverMeilleures() {
+      const annee = parseInt(document.getElementById('annee').value) || new Date().getFullYear();
+      const zone = document.getElementById('zone').value;
+      const objectif = document.getElementById('objectif').value;
+      const dispo = parseFloat(document.getElementById('n').value) + parseFloat(document.getElementById('n1').value);
+
+      const debut = new Date(annee, 0, 1);
+      const fin = new Date(annee, 11, 31);
+      let meilleures = [];
+
+      // Chercher toutes les périodes
+      for (let s = new Date(debut); s <= fin; s = addDays(s, 1)) {
+        for (let len = 3; len <= 20; len++) {
+          const e = addDays(s, len - 1);
+          if (e > fin) break;
+
+          const cout = coutCP(s, e);
+          if (cout > dispo) continue;
+
+          let bonus = 0;
+          for (let d = new Date(s); d <= e; d = addDays(d, 1)) {
+            if (isJourFerie(d)) bonus += 5;
+            if (isVacances(d, zone)) bonus += 3;
+          }
+
+          const score = objectif === 'long' ? len : (len / cout) * 10;
+          meilleures.push({ debut: s, fin: e, cout, jours: len, bonus, score });
+        }
+      }
+
+      // Trier et garder top 5
+      meilleures.sort((a, b) => b.score - a.score);
+      meilleures = meilleures.slice(0, 5);
+
+      let html = '<div class="result-box"><h3>🏆 Top 5 des meilleures périodes</h3><table>';
+      html += '<tr><th>#</th><th>Période</th><th>CP</th><th>Durée</th><th>Bonus</th></tr>';
+
+      meilleures.forEach((p, i) => {
+        html += `<tr onclick="remplirDates('${toISO(p.debut)}', '${toISO(p.fin)}')" style="cursor:pointer;background:#fffacd">
+          <td>${i + 1}</td>
+          <td><strong>${fmt(p.debut)} → ${fmt(p.fin)}</strong></td>
+          <td>${p.cout}</td>
+          <td>${p.jours}j</td>
+          <td>${p.bonus > 0 ? '⭐ ' + p.bonus : '-'}</td>
+        </tr>`;
+      });
+
+      html += '</table><p class="text-small">💡 Cliquez sur une période pour l\'analyser</p></div>';
+      afficherResultat(html);
+    }
+
+    function remplirDates(debut, fin) {
+      document.getElementById('dateStart').value = debut;
+      document.getElementById('dateEnd').value = fin;
+      analyzerPeriode();
+    }
+
+    function afficherResultat(html) {
+      document.getElementById('resultats').innerHTML = html;
+    }
+
+    function reinitialiser() {
+      document.getElementById('dateStart').value = '';
+      document.getElementById('dateEnd').value = '';
+      document.getElementById('resultats').innerHTML = '';
+    }
+
+    // Initialisation
+    window.addEventListener('load', () => {
+      const annee = new Date().getFullYear();
+      document.getElementById('annee').value = annee;
+      mettreAJourStats();
+    });
+
+    document.getElementById('n1').addEventListener('change', mettreAJourStats);
+    document.getElementById('n').addEventListener('change', mettreAJourStats);
+  </script>
+</body>
+</html>
